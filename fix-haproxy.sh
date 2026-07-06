@@ -143,7 +143,7 @@ global
     # Performance
     maxconn 100000
     tune.bufsize 32768
-    nbthread auto
+    nbthread 4
 
 defaults
     log     global
@@ -181,12 +181,14 @@ frontend ft_https
     mode tcp
     option  clitcpka
     tcp-request inspect-delay 5s
-    tcp-request content accept if HTTP
 
     # Rate Limit
     stick-table type ip size 100k expire 30s store conn_cur
     tcp-request connection track-sc0 src
-    tcp-request connection reject if { sc_conn_cur gt 50 }
+    tcp-request content reject if { sc0_conn_cur gt 50 }
+
+    # Detect HTTP
+    tcp-request content accept if HTTP
 
     # HTTP -> nginx
     use_backend be_nginx if HTTP
@@ -213,7 +215,7 @@ frontend ft_http
     # Rate Limit
     stick-table type ip size 100k expire 30s store conn_cur,http_req_rate(10s)
     tcp-request connection track-sc0 src
-    http-request deny deny_status 429 if { sc_http_req_rate gt 200 }
+    http-request deny deny_status 429 if { sc0_http_req_rate(10s) gt 200 }
 
     # Xray WS paths
     use_backend be_xray_vmess_ws if { path_beg /vmess }
@@ -311,7 +313,21 @@ if [ -f /etc/nginx/conf.d/xray.conf ]; then
     sed -i '/ssl_protocols /d' /etc/nginx/conf.d/xray.conf
     sed -i 's/ http2//g' /etc/nginx/conf.d/xray.conf
     
-    echo -e "[ ${green}OK${NC} ] Nginx migrated to 127.0.0.1:81"
+    # Test nginx config
+    if nginx -t 2>/dev/null; then
+        echo -e "[ ${green}OK${NC} ] Nginx migrated to 127.0.0.1:81"
+    else
+        echo -e "[ ${red}ERROR${NC} ] Nginx config error, restoring backup..."
+        cp /etc/nginx/conf.d/xray.conf.bak.$(date +%Y%m%d%H%M) /etc/nginx/conf.d/xray.conf
+        # Try simpler migration - just change listen ports
+        sed -i 's/listen 80;/listen 127.0.0.1:81;/g' /etc/nginx/conf.d/xray.conf
+        sed -i 's/listen 443 ssl.*/listen 127.0.0.1:81;/g' /etc/nginx/conf.d/xray.conf
+        if nginx -t 2>/dev/null; then
+            echo -e "[ ${green}OK${NC} ] Nginx migrated (simple mode)"
+        else
+            echo -e "[ ${red}ERROR${NC} ] Nginx config error persists, cek manual"
+        fi
+    fi
 else
     echo -e "[ ${yell}WARN${NC} ] Nginx config tidak ditemukan"
 fi

@@ -114,7 +114,7 @@ global
     tune.ssl.force-private-cache
 
     # Multi-threading (gunakan semua CPU core)
-    nbthread auto
+    nbthread 4
 
 defaults
     log     global
@@ -158,20 +158,22 @@ frontend ft_https
 
     mode tcp
 
-    # TCP Optimization
+    mode tcp
     option  clitcpka
     tcp-request inspect-delay 5s
-    tcp-request content accept if HTTP
 
-    # Rate Limiting: max 50 koneksi per IP
+    # Rate Limit
     stick-table type ip size 100k expire 30s store conn_cur
     tcp-request connection track-sc0 src
-    tcp-request connection reject if { sc_conn_cur gt 50 }
+    tcp-request content reject if { sc0_conn_cur gt 50 }
 
-    # HTTP traffic -> nginx (Xray WS + gRPC + web)
+    # Detect HTTP
+    tcp-request content accept if HTTP
+
+    # HTTP -> nginx
     use_backend be_nginx if HTTP
 
-    # Non-HTTP traffic -> Dropbear SSH TLS
+    # Non-HTTP -> Dropbear SSH TLS
     default_backend be_dropbear_tls
 
 # ============================================================
@@ -214,7 +216,7 @@ frontend ft_http
     # Rate Limiting: max 100 koneksi per IP
     stick-table type ip size 100k expire 30s store conn_cur,http_req_rate(10s)
     tcp-request connection track-sc0 src
-    http-request deny deny_status 429 if { sc_http_req_rate gt 200 }
+    http-request deny deny_status 429 if { sc0_http_req_rate(10s) gt 200 }
 
     # Xray WS Path Routing
     use_backend be_xray_vmess_ws if { path_beg /vmess }
