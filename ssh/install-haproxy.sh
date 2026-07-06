@@ -315,6 +315,9 @@ fi
 # ============================================================
 echo -e "[ ${green}INFO${NC} ] Applying TCP kernel optimizations..."
 
+# Hapus config lama jika ada, lalu tulis yang baru
+sed -i '/# === HAProxy TCP Optimization ===/,/# File Descriptor Limit/d' /etc/sysctl.conf 2>/dev/null
+
 cat >> /etc/sysctl.conf << 'SYSCTL_EOF'
 
 # === HAProxy TCP Optimization ===
@@ -388,13 +391,15 @@ echo -e "[ ${green}OK${NC} ] stunnel4 removed"
 # ============================================================
 echo -e "[ ${green}INFO${NC} ] Opening firewall ports..."
 
-# HTTPS ports
+# HTTPS ports (cek dulu sebelum tambah, hindari duplikat)
 for port in 443 2053 2083 2087 2096 8443 222 777; do
+    iptables -C INPUT -p tcp --dport $port -j ACCEPT 2>/dev/null || \
     iptables -I INPUT -p tcp --dport $port -j ACCEPT 2>/dev/null
 done
 
 # HTTP ports
 for port in 80 8080 8880 2052 2082 2086 2095; do
+    iptables -C INPUT -p tcp --dport $port -j ACCEPT 2>/dev/null || \
     iptables -I INPUT -p tcp --dport $port -j ACCEPT 2>/dev/null
 done
 
