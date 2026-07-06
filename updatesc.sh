@@ -230,59 +230,92 @@ fi
 # ============================================================
 echo -e "[ ${green}6/7${NC} ] Cek dropbear compatibility..."
 
+# Cek apakah dropbear 2019 sudah terinstall
+DROPBEAR_2019_EXISTS=false
+DROPBEAR_VERSION_OK=false
+
+# Cek binary dropbear 2019 di lokasi custom
+if [ -f "/usr/local/dropbear-2019/sbin/dropbear" ]; then
+    DROPBEAR_2019_EXISTS=true
+    DROPBEAR_VERSION_OK=true
+    echo -e "[ ${green}OK${NC} ] Dropbear 2019 sudah terinstall di /usr/local/dropbear-2019/"
+fi
+
+# Cek versi dropbear yang sedang running
+if [ "$DROPBEAR_VERSION_OK" = false ]; then
+    DROPBEAR_BIN_PATH=$(which dropbear 2>/dev/null || echo "")
+    if [ -n "$DROPBEAR_BIN_PATH" ]; then
+        DROPBEAR_VER=$($DROPBEAR_BIN_PATH -V 2>&1 | head -1 | grep -oP '20\d{2}\.\d+' || echo "")
+        if [ -n "$DROPBEAR_VER" ]; then
+            DROPBEAR_MAJOR=$(echo "$DROPBEAR_VER" | cut -d. -f1)
+            if [ "$DROPBEAR_MAJOR" -ge 2019 ] 2>/dev/null; then
+                DROPBEAR_VERSION_OK=true
+                echo -e "[ ${green}OK${NC} ] Dropbear versi $DROPBEAR_VER sudah compatible"
+            else
+                echo -e "[ ${yell}INFO${NC} ] Dropbear versi $DROPBEAR_VER terlalu lama"
+            fi
+        fi
+    fi
+fi
+
+# Cek OpenSSL version
 OPENSSL_VER=$(openssl version 2>/dev/null | awk '{print $2}')
 OPENSSL_MAJOR=$(echo "$OPENSSL_VER" | cut -d. -f1)
 
-if [ "$OPENSSL_MAJOR" -ge 3 ] 2>/dev/null && [ ! -f "/usr/local/dropbear-2019/sbin/dropbear" ]; then
-    echo -e "[ ${yell}INFO${NC} ] OpenSSL 3.x terdeteksi, build dropbear 2019..."
-    wget -q -O /tmp/build-dropbear.sh "${REPO}/ssh/ssh-vpn.sh"
-    # Extract build_dropbear_isolated function and run it
-    bash -c "
-    source /etc/os-release 2>/dev/null
-    OPENSSL_VER=\$(openssl version 2>/dev/null | awk '{print \$2}')
-    OPENSSL_MAJOR=\$(echo \"\$OPENSSL_VER\" | cut -d. -f1)
+# Build hanya jika perlu
+if [ "$DROPBEAR_VERSION_OK" = true ]; then
+    echo -e "[ ${green}OK${NC} ] Dropbear sudah compatible, skip build"
     
-    if [ \"\$OPENSSL_MAJOR\" -ge 3 ] 2>/dev/null; then
-        BUILD_DIR=\"/tmp/dropbear-build\"
-        OPENSSL_PREFIX=\"/usr/local/openssl-1.1\"
-        DROPBEAR_PREFIX=\"/usr/local/dropbear-2019\"
-        
-        apt install -y zlib1g-dev libz-dev >/dev/null 2>&1
-        mkdir -p \"\$BUILD_DIR\"
-        cd \"\$BUILD_DIR\"
-        
-        if [ ! -f \"\${OPENSSL_PREFIX}/lib/libssl.so\" ]; then
-            echo '[INFO] Building OpenSSL 1.1.1w...'
-            wget -q https://www.openssl.org/source/openssl-1.1.1w.tar.gz
-            tar xzf openssl-1.1.1w.tar.gz
-            cd openssl-1.1.1w
-            ./config --prefix=\"\${OPENSSL_PREFIX}\" --openssldir=\"\${OPENSSL_PREFIX}/ssl\" no-shared no-tests >/dev/null 2>&1
-            make -j\$(nproc) >/dev/null 2>&1
-            make install_sw >/dev/null 2>&1
-            cd \"\$BUILD_DIR\"
-        fi
-        
-        if [ ! -f \"\${DROPBEAR_PREFIX}/sbin/dropbear\" ]; then
-            echo '[INFO] Building dropbear 2019.78...'
-            wget -q https://matt.ucc.asn.au/dropbear/releases/dropbear-2019.78.tar.bz2
-            tar xjf dropbear-2019.78.tar.bz2
-            cd dropbear-2019.78
-            ./configure --prefix=\"\${DROPBEAR_PREFIX}\" --with-ssl=\"\${OPENSSL_PREFIX}\" --disable-zlib >/dev/null 2>&1
-            make -j\$(nproc) PROGRAMS=\"dropbear dropbearkey dbclient scp\" >/dev/null 2>&1
-            make install PROGRAMS=\"dropbear dropbearkey dbclient scp\" >/dev/null 2>&1
-        fi
-        
-        ln -sf \"\${DROPBEAR_PREFIX}/sbin/dropbear\" /usr/local/sbin/dropbear
-        ln -sf \"\${DROPBEAR_PREFIX}/bin/dropbearkey\" /usr/local/bin/dropbearkey
-        echo \"\${OPENSSL_PREFIX}/lib\" > /etc/ld.so.conf.d/openssl-1.1.conf
-        ldconfig
-        
-        cd /root
-        rm -rf \"\$BUILD_DIR\"
-        rm -f /tmp/build-dropbear.sh
-        
-        # Buat systemd service
-        cat > /etc/systemd/system/dropbear.service <<-DEND
+    # Pastikan symlink ada jika binary custom
+    if [ "$DROPBEAR_2019_EXISTS" = true ]; then
+        ln -sf /usr/local/dropbear-2019/sbin/dropbear /usr/local/sbin/dropbear 2>/dev/null
+        ln -sf /usr/local/dropbear-2019/bin/dropbearkey /usr/local/bin/dropbearkey 2>/dev/null
+    fi
+elif [ "$OPENSSL_MAJOR" -ge 3 ] 2>/dev/null; then
+    echo -e "[ ${yell}INFO${NC} ] OpenSSL $OPENSSL_VER terdeteksi, build dropbear 2019..."
+    
+    BUILD_DIR="/tmp/dropbear-build"
+    OPENSSL_PREFIX="/usr/local/openssl-1.1"
+    DROPBEAR_PREFIX="/usr/local/dropbear-2019"
+    
+    apt install -y zlib1g-dev libz-dev >/dev/null 2>&1
+    mkdir -p "$BUILD_DIR"
+    cd "$BUILD_DIR"
+    
+    # Build OpenSSL 1.1.1 jika belum ada
+    if [ ! -f "${OPENSSL_PREFIX}/lib/libssl.so" ]; then
+        echo -e "[ ${green}INFO${NC} ] Building OpenSSL 1.1.1w..."
+        wget -q https://www.openssl.org/source/openssl-1.1.1w.tar.gz
+        tar xzf openssl-1.1.1w.tar.gz
+        cd openssl-1.1.1w
+        ./config --prefix="${OPENSSL_PREFIX}" --openssldir="${OPENSSL_PREFIX}/ssl" no-shared no-tests >/dev/null 2>&1
+        make -j$(nproc) >/dev/null 2>&1
+        make install_sw >/dev/null 2>&1
+        cd "$BUILD_DIR"
+        echo -e "[ ${green}OK${NC} ] OpenSSL 1.1.1w terinstall"
+    fi
+    
+    # Build dropbear 2019.78
+    echo -e "[ ${green}INFO${NC} ] Building dropbear 2019.78..."
+    wget -q https://matt.ucc.asn.au/dropbear/releases/dropbear-2019.78.tar.bz2
+    tar xjf dropbear-2019.78.tar.bz2
+    cd dropbear-2019.78
+    ./configure --prefix="${DROPBEAR_PREFIX}" --with-ssl="${OPENSSL_PREFIX}" --disable-zlib >/dev/null 2>&1
+    make -j$(nproc) PROGRAMS="dropbear dropbearkey dbclient scp" >/dev/null 2>&1
+    make install PROGRAMS="dropbear dropbearkey dbclient scp" >/dev/null 2>&1
+    
+    # Symlink
+    ln -sf "${DROPBEAR_PREFIX}/sbin/dropbear" /usr/local/sbin/dropbear
+    ln -sf "${DROPBEAR_PREFIX}/bin/dropbearkey" /usr/local/bin/dropbearkey
+    echo "${OPENSSL_PREFIX}/lib" > /etc/ld.so.conf.d/openssl-1.1.conf
+    ldconfig
+    
+    # Cleanup
+    cd /root
+    rm -rf "$BUILD_DIR"
+    
+    # Buat systemd service
+    cat > /etc/systemd/system/dropbear.service <<-DEND
 [Unit]
 Description=Dropbear SSH Server
 After=network.target
@@ -296,15 +329,13 @@ Restart=on-failure
 [Install]
 WantedBy=multi-user.target
 DEND
-        systemctl daemon-reload
-        systemctl enable dropbear
-        systemctl restart dropbear
-        
-        echo '[OK] Dropbear 2019.78 + OpenSSL 1.1.1 terinstall'
-    fi
-    "
+    systemctl daemon-reload
+    systemctl enable dropbear
+    systemctl restart dropbear
+    
+    echo -e "[ ${green}OK${NC} ] Dropbear 2019.78 + OpenSSL 1.1.1 terinstall"
 else
-    echo -e "[ ${green}OK${NC} ] Dropbear compatible, skip build"
+    echo -e "[ ${green}OK${NC} ] System dropbear compatible, skip build"
 fi
 
 # ============================================================
