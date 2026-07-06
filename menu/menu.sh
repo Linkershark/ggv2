@@ -24,121 +24,150 @@ do
 done < /root/expired.txt
 rm /root/expired.txt
 Name=$(curl -sS https://raw.githubusercontent.com/Linkershark/ggv2/aio/permission/ip | grep $MYIP | awk '{print $2}')
-# Color Validation
+
+# Color
 DF='\e[39m'
 Bold='\e[1m'
-Blink='\e[5m'
 yell='\e[33m'
 red='\e[31m'
 green='\e[32m'
 blue='\e[34m'
 PURPLE='\e[35m'
 cyan='\e[36m'
-Lred='\e[91m'
-Lgreen='\e[92m'
-Lyellow='\e[93m'
 NC='\e[0m'
 GREEN='\033[0;32m'
+RED='\033[0;31m'
 ORANGE='\033[0;33m'
-LIGHT='\033[0;37m'
+
 # VPS Information
-#Domain
 domain=$(cat /etc/xray/domain)
-#Status certificate
-modifyTime=$(stat $HOME/.acme.sh/${domain}_ecc/${domain}.key | sed -n '7,6p' | awk '{print $2" "$3" "$4" "$5}')
-modifyTime1=$(date +%s -d "${modifyTime}")
-currentTime=$(date +%s)
-stampDiff=$(expr ${currentTime} - ${modifyTime1})
-days=$(expr ${stampDiff} / 86400)
-remainingDays=$(expr 90 - ${days})
-tlsStatus=${remainingDays}
-if [[ ${remainingDays} -le 0 ]]; then
-	tlsStatus="expired"
-fi
-# OS Uptime
 uptime="$(uptime -p | cut -d " " -f 2-10)"
-# Download
-#Download/Upload today
+
+# Bandwidth
 dtoday="$(vnstat -i eth0 | grep "today" | awk '{print $2" "substr ($3, 1, 1)}')"
 utoday="$(vnstat -i eth0 | grep "today" | awk '{print $5" "substr ($6, 1, 1)}')"
 ttoday="$(vnstat -i eth0 | grep "today" | awk '{print $8" "substr ($9, 1, 1)}')"
-#Download/Upload yesterday
-dyest="$(vnstat -i eth0 | grep "yesterday" | awk '{print $2" "substr ($3, 1, 1)}')"
-uyest="$(vnstat -i eth0 | grep "yesterday" | awk '{print $5" "substr ($6, 1, 1)}')"
-tyest="$(vnstat -i eth0 | grep "yesterday" | awk '{print $8" "substr ($9, 1, 1)}')"
-#Download/Upload current month
 dmon="$(vnstat -i eth0 -m | grep "`date +"%b '%y"`" | awk '{print $3" "substr ($4, 1, 1)}')"
 umon="$(vnstat -i eth0 -m | grep "`date +"%b '%y"`" | awk '{print $6" "substr ($7, 1, 1)}')"
 tmon="$(vnstat -i eth0 -m | grep "`date +"%b '%y"`" | awk '{print $9" "substr ($10, 1, 1)}')"
-# Getting CPU Information
-cpu_usage1="$(ps aux | awk 'BEGIN {sum=0} {sum+=$3}; END {print sum}')"
-cpu_usage="$((${cpu_usage1/\.*} / ${corediilik:-1}))"
-cpu_usage+=" %"
-ISP=$(curl -s ipinfo.io/org?token=192c6d2ef7a236 | cut -d " " -f 2-10 )
-CITY=$(curl -s ipinfo.io/city?token=192c6d2ef7a236 )
-WKT=$(curl -s ipinfo.io/timezone?token=192c6d2ef7a236 )
-DAY=$(date +%A)
-DATE=$(date +%m/%d/%Y)
-DATE2=$(date -R | cut -d " " -f -5)
-IPVPS=$(curl -s ipinfo.io/ip?token=192c6d2ef7a236 )
+
+# CPU & RAM
+cpu_usage="$(top -bn1 | grep "Cpu(s)" | awk '{print $2}')"
 cname=$( awk -F: '/model name/ {name=$2} END {print name}' /proc/cpuinfo )
 cores=$( awk -F: '/model name/ {core++} END {print core}' /proc/cpuinfo )
-freq=$( awk -F: ' /cpu MHz/ {freq=$2} END {print freq}' /proc/cpuinfo )
 tram=$( free -m | awk 'NR==2 {print $2}' )
 uram=$( free -m | awk 'NR==2 {print $3}' )
 fram=$( free -m | awk 'NR==2 {print $4}' )
-nginx=$( systemctl status nginx | grep Active | awk '{print $3}' | sed 's/(//g' | sed 's/)//g' )
-if [[ $nginx == "running" ]]; then
-    status_nginx="${GREEN}ON ${NC} "
+
+# OS Info
+ISP=$(curl -s ipinfo.io/org?token=192c6d2ef7a236 | cut -d " " -f 2-10)
+CITY=$(curl -s ipinfo.io/city?token=192c6d2ef7a236)
+IPVPS=$(curl -s ipinfo.io/ip?token=192c6d2ef7a236)
+DATE2=$(date -R | cut -d " " -f -5)
+
+# ─── Service Status ───
+check_service() {
+    local svc="$1"
+    local status=$(systemctl is-active "$svc" 2>/dev/null)
+    if [ "$status" = "active" ]; then
+        echo -e "${GREEN}ON${NC}"
+    else
+        echo -e "${RED}OFF${NC}"
+    fi
+}
+
+status_xray=$(check_service xray)
+status_nginx=$(check_service nginx)
+status_haproxy=$(check_service haproxy)
+status_dropbear=$(check_service dropbear)
+status_ws=$(check_service ws-dropbear)
+status_fail2ban=$(check_service fail2ban)
+
+# ─── Account Count ───
+# Xray accounts (count email fields in config.json, exclude REMOVED_)
+if [ -f /etc/xray/config.json ]; then
+    acc_vmess=$(grep -c '"email"' /etc/xray/config.json 2>/dev/null || echo 0)
+    acc_vless=$(grep -c '#vless' /etc/xray/config.json 2>/dev/null || echo 0)
+    acc_trojan=$(grep -c '#trojanws' /etc/xray/config.json 2>/dev/null || echo 0)
+    acc_ss=$(grep -c '#ssws' /etc/xray/config.json 2>/dev/null || echo 0)
+    # Count unique non-REMOVED users
+    acc_total=$(grep -oP '"email":\s*"\K[^"]+' /etc/xray/config.json 2>/dev/null | grep -v "^REMOVED_" | sort -u | wc -l)
 else
-    status_nginx="${RED}OFF ${NC} "
+    acc_vmess=0; acc_vless=0; acc_trojan=0; acc_ss=0; acc_total=0
 fi
 
-##xray
-xxray=$( systemctl status nginx | grep Active | awk '{print $3}' | sed 's/(//g' | sed 's/)//g' )
-if [[ $xxray == "running" ]]; then
-    status_xray="${GREEN}ON ${NC} "
+# SSH accounts (count users with /bin/bash or /bin/sh, exclude system users)
+acc_ssh=$(awk -F: '$7 ~ /(bash|sh|nologin|false)/ && $3 >= 1000 {count++} END {print count+0}' /etc/passwd)
+
+# ─── TLS Certificate Status ───
+if [ -d "$HOME/.acme.sh/${domain}_ecc" ]; then
+    modifyTime=$(stat $HOME/.acme.sh/${domain}_ecc/${domain}.key 2>/dev/null | sed -n '7,6p' | awk '{print $2" "$3" "$4" "$5}')
+    modifyTime1=$(date +%s -d "${modifyTime}" 2>/dev/null)
+    currentTime=$(date +%s)
+    stampDiff=$((${currentTime} - ${modifyTime1}))
+    days=$((${stampDiff} / 86400))
+    remainingDays=$(expr 90 - ${days})
+    if [[ ${remainingDays} -le 0 ]]; then
+        tlsStatus="${RED}Expired${NC}"
+    elif [[ ${remainingDays} -le 14 ]]; then
+        tlsStatus="${ORANGE}${remainingDays}d remaining${NC}"
+    else
+        tlsStatus="${GREEN}${remainingDays}d remaining${NC}"
+    fi
 else
-    status_xray="${RED}OFF ${NC} "
+    tlsStatus="${RED}Not found${NC}"
 fi
 
-clear 
-echo -e "\e[33m ┌─────────────────────────────────────────────────┐"
-echo -e "${cyan} │                 LINKERSHARK                     │"
-echo -e "${cyan} └─────────────────────────────────────────────────┘"
-echo -e "\e[33m | OS            \e[0m:  "`hostnamectl | grep "Operating System" | cut -d ' ' -f5-`
-echo -e "\e[33m | IP            \e[0m:  $IPVPS"
-echo -e "\e[33m | ASN           \e[0m:  $ISP"
-echo -e "\e[33m | CITY          \e[0m:  $CITY"
-echo -e "\e[33m | DOMAIN        \e[0m:  $domain"
-echo -e "\e[33m | DATE & TIME   \e[0m:  $DATE2"
-echo -e "\e[33m └─────────────────────────────────────────────────┘\033[0m"
-echo -e "\e[33m                       STATUS                              "
+# ─── DISPLAY ───
+clear
+echo -e "${yell} ┌─────────────────────────────────────────────────┐${NC}"
+echo -e "${cyan} │                 LINKERSHARK                     │${NC}"
+echo -e "${yell} └─────────────────────────────────────────────────┘${NC}"
+echo -e "${yell} │${NC} OS            :  $(hostnamectl | grep "Operating System" | cut -d ' ' -f5-)"
+echo -e "${yell} │${NC} IP            :  $IPVPS"
+echo -e "${yell} │${NC} ASN           :  $ISP"
+echo -e "${yell} │${NC} CITY          :  $CITY"
+echo -e "${yell} │${NC} DOMAIN        :  $domain"
+echo -e "${yell} │${NC} DATE & TIME   :  $DATE2"
+echo -e "${yell} │${NC} UPTIME        :  $uptime"
+echo -e "${yell} │${NC} CPU           :  ${cpu_usage} (${cores} Core)"
+echo -e "${yell} │${NC} RAM           :  ${uram} MB / ${tram} MB"
+echo -e "${yell} └─────────────────────────────────────────────────┘${NC}"
+
+echo -e "${yell} ┌────────────────── SERVICE ──────────────────────┐${NC}"
+echo -e "${yell} │${NC}  Xray     [${status_xray}]   Nginx    [${status_nginx}]   HAProxy  [${status_haproxy}]"
+echo -e "${yell} │${NC}  Dropbear [${status_dropbear}]   WS-SSH   [${status_ws}]   Fail2ban [${status_fail2ban}]"
+echo -e "${yell} │${NC}  TLS Cert :  $tlsStatus"
+echo -e "${yell} └─────────────────────────────────────────────────┘${NC}"
+
+echo -e "${yell} ┌────────────────── BANDWIDTH ────────────────────┐${NC}"
+echo -e "${yell} │${NC}  Today    :  ▼ ${dtoday}  ▲ ${utoday}  = ${ttoday}"
+echo -e "${yell} │${NC}  Monthly  :  ▼ ${dmon}  ▲ ${umon}  = ${tmon}"
+echo -e "${yell} └─────────────────────────────────────────────────┘${NC}"
+
+echo -e "${yell} ┌────────────────── ACCOUNTS ─────────────────────┐${NC}"
+printf "${yell} │${NC}  SSH : %-4s  Vmess : %-4s  Vless : %-4s\n" "$acc_ssh" "$acc_vmess" "$acc_vless"
+printf "${yell} │${NC}  SS  : %-4s  Trojan: %-4s  Total : ${Bold}%s${NC}\n" "$acc_ss" "$acc_trojan" "$acc_total"
+echo -e "${yell} └─────────────────────────────────────────────────┘${NC}"
+
+echo -e "${yell} ┌────────────────── MENU ─────────────────────────┐${NC}"
+echo -e "${yell} │${NC}"
+echo -e "${yell} │${NC}   [${cyan}01${NC}] SSH Menu        [${cyan}05${NC}] TROJAN Menu"
+echo -e "${yell} │${NC}   [${cyan}02${NC}] VMESS Menu      [${cyan}06${NC}] SYSTEM Menu"
+echo -e "${yell} │${NC}   [${cyan}03${NC}] VLESS Menu      [${cyan}07${NC}] Running Status"
+echo -e "${yell} │${NC}   [${cyan}04${NC}] SHADOWSOCKS     [${cyan}08${NC}] Clear RAM"
+echo -e "${yell} │${NC}"
+echo -e "${yell} └─────────────────────────────────────────────────┘${NC}"
+
+echo -e "${cyan} ┌─────────────────────────────────────────────────┐${NC}"
+echo -e " ${yell}  Client Name${NC} : $Name"
+echo -e " ${yell}  Expired     ${NC} : $Exp2"
+echo -e "${cyan} └─────────────────────────────────────────────────┘${NC}"
 echo -e ""
-echo -e "${cyan}          [ NGINX : $status_nginx   XRAY : $status_xray ]      \033[0m"
-echo -e "\e[33m ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-echo -e "                 • SCRIPT MENU •                 "
-echo -e "\e[33m ┌─────────────────────────────────────────────────┐\033[0m"
-echo -e ""
-echo -e "    [\e[36m01\e[0m] SSH Menu"
-echo -e "    [\e[36m02\e[0m] VMESS Menu"
-echo -e "    [\e[36m03\e[0m] VLESS Menu"
-echo -e "    [\e[36m04\e[0m] SHADOWSOCKS Menu"
-echo -e "    [\e[36m05\e[0m] TROJAN Menu"
-echo -e "    [\e[36m06\e[0m] SYSTEM Menu"
-echo -e "    [\e[36m07\e[0m] STATUS Service"
-echo -e "    [\e[36m08\e[0m] CLEAR RAM Cache"
-echo -e   ""
-echo -e "\e[33m └─────────────────────────────────────────────────┘\033[0m"
-echo -e "${cyan} ┌─────────────────────────────────────────────────┐"
-echo -e " \e[33m  Client Name \E[0m: $Name"
-echo -e " \e[33m  Expired     \E[0m: $Exp2"
-echo -e "\e[33m └─────────────────────────────────────────────────┘\033[0m"
-echo -e ""
-echo -e " Press x or [ Ctrl+C ] • To-Exit-Script "
+echo -e " Press x or [ Ctrl+C ] • To-Exit-Script"
 echo -e ""
 read -p " Select menu :  "  opt
-echo -e   ""
+echo -e ""
 case $opt in
 1) clear ; m-sshovpn ;;
 2) clear ; m-vmess ;;
