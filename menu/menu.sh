@@ -99,25 +99,6 @@ fi
 # SSH accounts (count users with /bin/bash or /bin/sh, exclude system users)
 acc_ssh=$(awk -F: '$7 ~ /(bash|sh|nologin|false)/ && $3 >= 1000 {count++} END {print count+0}' /etc/passwd)
 
-# ─── TLS Certificate Status ───
-if [ -d "$HOME/.acme.sh/${domain}_ecc" ]; then
-    modifyTime=$(stat $HOME/.acme.sh/${domain}_ecc/${domain}.key 2>/dev/null | sed -n '7,6p' | awk '{print $2" "$3" "$4" "$5}')
-    modifyTime1=$(date +%s -d "${modifyTime}" 2>/dev/null)
-    currentTime=$(date +%s)
-    stampDiff=$((${currentTime} - ${modifyTime1}))
-    days=$((${stampDiff} / 86400))
-    remainingDays=$(expr 90 - ${days})
-    if [[ ${remainingDays} -le 0 ]]; then
-        tlsStatus="${RED}Expired${NC}"
-    elif [[ ${remainingDays} -le 14 ]]; then
-        tlsStatus="${ORANGE}${remainingDays}d remaining${NC}"
-    else
-        tlsStatus="${GREEN}${remainingDays}d remaining${NC}"
-    fi
-else
-    tlsStatus="${RED}Not found${NC}"
-fi
-
 # ─── DISPLAY ───
 clear
 echo -e "${yell} ┌─────────────────────────────────────────────────┐${NC}"
@@ -137,7 +118,6 @@ echo -e "${yell} └────────────────────
 echo -e "${yell} ┌────────────────── SERVICE ──────────────────────┐${NC}"
 echo -e "${yell} │${NC}  Xray     [${status_xray}]   Nginx    [${status_nginx}]   HAProxy  [${status_haproxy}]"
 echo -e "${yell} │${NC}  Dropbear [${status_dropbear}]   WS-SSH   [${status_ws}]   Fail2ban [${status_fail2ban}]"
-echo -e "${yell} │${NC}  TLS Cert :  $tlsStatus"
 echo -e "${yell} └─────────────────────────────────────────────────┘${NC}"
 
 echo -e "${yell} ┌────────────────── BANDWIDTH ────────────────────┐${NC}"
