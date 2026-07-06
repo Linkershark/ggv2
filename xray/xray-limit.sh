@@ -176,7 +176,14 @@ get_user_bandwidth() {
     
     uplink=${uplink:-0}
     downlink=${downlink:-0}
-    echo $((uplink + downlink))
+    local total=$((uplink + downlink))
+    
+    # Jika Xray stats tidak work (total=0), coba ambil dari bandwidth tracking
+    if [ "$total" -eq 0 ] && [ -f "${LIMIT_DIR}/bandwidth/${user}.bw" ]; then
+        total=$(cat "${LIMIT_DIR}/bandwidth/${user}.bw" 2>/dev/null || echo 0)
+    fi
+    
+    echo "$total"
 }
 
 # Hitung jumlah IP unik yang terhubung untuk user tertentu

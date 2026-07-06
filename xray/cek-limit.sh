@@ -102,7 +102,11 @@ else
         if [ "$QUOTA_BYTES" -gt 0 ]; then
             used_fmt=$(format_bytes "$used_bytes")
             quota_fmt=$(format_bytes "$QUOTA_BYTES")
-            quota="${used_fmt} / ${quota_fmt}"
+            if [ "$used_bytes" -eq 0 ]; then
+                quota="N/A / ${quota_fmt}"
+            else
+                quota="${used_fmt} / ${quota_fmt}"
+            fi
         else
             quota="Unlimited"
         fi
@@ -126,4 +130,6 @@ else
     
     echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
     echo -e "Total: ${count} user(s)"
+    echo -e ""
+    echo -e "${yell}Note: N/A = Xray stats belum tercatat (butuh traffic aktif)${NC}"
 fi
