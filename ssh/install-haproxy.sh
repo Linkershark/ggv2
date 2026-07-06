@@ -186,7 +186,8 @@ frontend ft_https_legacy
 
 # ============================================================
 # HTTP FRONTEND - Non-TLS (Cloudflare HTTP Ports)
-# Port: 80, 8080, 8880, 2052, 2082, 2086, 2095
+# Port: 80, 8080, 8880, 2052, 2082, 2086
+# (2095 handled by ft_ws_dropbear for SSH WebSocket)
 # ============================================================
 frontend ft_http
     bind *:80
@@ -195,7 +196,6 @@ frontend ft_http
     bind *:2052
     bind *:2082
     bind *:2086
-    bind *:2095
 
     mode http
 
@@ -220,10 +220,10 @@ frontend ft_http
 
 # ============================================================
 # WS-DROPBEAR FRONTEND - WebSocket SSH
-# Port: 6969 (internal, di-forward dari port lain)
+# Port: 2095 (Cloudflare HTTP port for SSH WebSocket)
 # ============================================================
 frontend ft_ws_dropbear
-    bind *:6969
+    bind *:2095
     mode tcp
     option  clitcpka
     default_backend be_ws_dropbear
@@ -277,11 +277,11 @@ backend be_dropbear
     option  srvtcpka
     server dropbear 127.0.0.1:109
 
-# WS-Dropbear (port 2095 internal)
+# WS-Dropbear (internal port 6969)
 backend be_ws_dropbear
     mode tcp
     option  srvtcpka
-    server wsdropbear 127.0.0.1:2095
+    server wsdropbear 127.0.0.1:6969
 
 # ============================================================
 # STATS PAGE (admin only, localhost)
