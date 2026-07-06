@@ -207,22 +207,39 @@ echo -e "[ ${green}OK${NC} ] Limit system sudah terinstall"
 # ============================================================
 echo -e "[ ${green}5/7${NC} ] Install HAProxy (ganti stunnel4)..."
 
-if ! command -v haproxy &>/dev/null; then
-    # Download dan jalankan installer HAProxy
-    wget -q -O /tmp/install-haproxy.sh "${REPO}/ssh/install-haproxy.sh"
+# Hapus stunnel4 terlebih dahulu
+echo -e "[ ${green}INFO${NC} ] Menghapus stunnel4..."
+systemctl stop stunnel4 2>/dev/null
+systemctl disable stunnel4 2>/dev/null
+apt remove --purge stunnel4 -y >/dev/null 2>&1
+echo -e "[ ${green}OK${NC} ] stunnel4 dihapus"
+
+# Download installer HAProxy
+echo -e "[ ${green}INFO${NC} ] Download installer HAProxy..."
+if wget -q -O /tmp/install-haproxy.sh "${REPO}/ssh/install-haproxy.sh"; then
     chmod +x /tmp/install-haproxy.sh
+    
+    # Backup config lama jika ada
+    if [ -f /etc/haproxy/haproxy.cfg ]; then
+        cp /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg.bak.$(date +%Y%m%d) 2>/dev/null
+    fi
+    
+    # Jalankan installer
+    echo -e "[ ${green}INFO${NC} ] Menjalankan installer HAProxy..."
     bash /tmp/install-haproxy.sh
     rm -f /tmp/install-haproxy.sh
-    echo -e "[ ${green}OK${NC} ] HAProxy sudah terinstall"
+    
+    # Verifikasi HAProxy berhasil diinstall
+    if systemctl is-active --quiet haproxy 2>/dev/null; then
+        echo -e "[ ${green}OK${NC} ] HAProxy berhasil diinstall dan running"
+    else
+        echo -e "[ ${red}ERROR${NC} ] HAProxy gagal start, cek: systemctl status haproxy"
+        # Coba start manual
+        systemctl start haproxy 2>/dev/null
+    fi
 else
-    echo -e "[ ${green}OK${NC} ] HAProxy sudah ada, skip install"
-    # Update config saja
-    wget -q -O /tmp/install-haproxy.sh "${REPO}/ssh/install-haproxy.sh"
-    # Backup config lama
-    cp /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg.bak.$(date +%Y%m%d) 2>/dev/null
-    chmod +x /tmp/install-haproxy.sh
-    bash /tmp/install-haproxy.sh
-    rm -f /tmp/install-haproxy.sh
+    echo -e "[ ${red}ERROR${NC} ] Gagal download installer HAProxy"
+    echo -e "[ ${yell}INFO${NC} ] Coba manual: wget ${REPO}/ssh/install-haproxy.sh && bash install-haproxy.sh"
 fi
 
 # ============================================================
