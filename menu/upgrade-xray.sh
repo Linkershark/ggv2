@@ -52,8 +52,14 @@ esac
 
 echo ""
 echo -e "[ ${green}INFO${NC} ] Target: Xray v${TARGET_VER}"
+
+# Backup config
 echo -e "[ ${green}INFO${NC} ] Backup config..."
-cp /etc/xray/config.json /etc/xray/config.json.bak.$(date +%Y%m%d%H%M%S)
+mkdir -p /root/xray-backup
+cp /etc/xray/config.json /root/xray-backup/config.json.bak.$(date +%Y%m%d%H%M%S)
+
+# Backup service file lama
+cp /etc/systemd/system/xray.service /root/xray-backup/xray.service.bak 2>/dev/null
 
 echo -e "[ ${green}INFO${NC} ] Downloading Xray v${TARGET_VER}..."
 
@@ -64,7 +70,42 @@ if [ $? -eq 0 ]; then
     echo ""
     echo -e "[ ${green}OK${NC} ] Xray v${TARGET_VER} berhasil diinstall!"
     
+    # ========================================
+    # FIX: Pastikan service pakai config yang benar
+    # ========================================
+    echo -e "[ ${green}INFO${NC} ] Fix service config path..."
+    
+    # Buat service file yang benar
+    cat > /etc/systemd/system/xray.service << 'SVCEOF'
+[Unit]
+Description=Xray Service
+Documentation=https://github.com/xtls
+After=network.target nss-lookup.target
+
+[Service]
+User=root
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+ExecStart=/usr/local/bin/xray run -config /etc/xray/config.json
+Restart=on-failure
+RestartPreventExitStatus=23
+LimitNPROC=10000
+LimitNOFILE=1000000
+
+[Install]
+WantedBy=multi-user.target
+SVCEOF
+
+    # Reload systemd
+    systemctl daemon-reload
+    
+    # Buat symlink config jika belum ada
+    mkdir -p /usr/local/etc/xray
+    ln -sf /etc/xray/config.json /usr/local/etc/xray/config.json
+    
     # Restart xray
+    echo -e "[ ${green}INFO${NC} ] Restarting Xray..."
     systemctl restart xray
     sleep 2
     
@@ -72,20 +113,25 @@ if [ $? -eq 0 ]; then
     NEW_VER=$(xray version 2>/dev/null | head -1 | awk '{print $2}')
     if systemctl is-active --quiet xray; then
         echo -e "[ ${green}OK${NC} ] Xray running: v${NEW_VER}"
+        echo -e "[ ${green}OK${NC} ] Config: /etc/xray/config.json"
         echo ""
         echo -e "${green}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
         echo -e "${green}  Upgrade berhasil!${NC}"
         echo -e "${green}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
         echo ""
-        echo -e "  Sebelum: v${CURRENT_VER}"
-        echo -e "  Sesudah: v${NEW_VER}"
+        echo -e "  Sebelum : v${CURRENT_VER}"
+        echo -e "  Sesudah : v${NEW_VER}"
+        echo -e "  Config  : /etc/xray/config.json"
         echo ""
         echo -e "  Per-user stats sekarang AKTIF!"
         echo -e "  Command: cek-limit"
         echo ""
     else
         echo -e "[ ${red}ERROR${NC} ] Xray gagal start!"
-        echo -e "[ ${yell}INFO${NC} ] Restore backup: cp /etc/xray/config.json.bak.* /etc/xray/config.json"
+        echo -e "[ ${yell}INFO${NC] ] Restore backup:"
+        echo -e "  cp /root/xray-backup/config.json.bak.* /etc/xray/config.json"
+        echo -e "  cp /root/xray-backup/xray.service.bak /etc/systemd/system/xray.service"
+        echo -e "  systemctl daemon-reload && systemctl restart xray"
         echo -e "[ ${yell}INFO${NC} ] Cek log: journalctl -u xray --no-pager -n 20"
     fi
 else
