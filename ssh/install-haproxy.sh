@@ -17,7 +17,14 @@ NC='\e[0m'
 domain=$(cat /etc/xray/domain 2>/dev/null || cat /root/domain 2>/dev/null)
 
 echo -e "[ ${green}INFO${NC} ] Installing HAProxy..."
-apt install -y haproxy >/dev/null 2>&1
+apt update -y >/dev/null 2>&1
+apt install -y haproxy
+if ! command -v haproxy &>/dev/null; then
+    echo -e "[ ${red}ERROR${NC} ] HAProxy gagal diinstall!"
+    echo -e "[ ${yell}INFO${NC} ] Coba manual: apt install -y haproxy"
+    exit 1
+fi
+echo -e "[ ${green}OK${NC} ] HAProxy terinstall"
 
 # ============================================================
 # 1. PREPARE SSL CERTIFICATE

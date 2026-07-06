@@ -84,13 +84,14 @@ status_ws=$(check_service ws-dropbear)
 status_fail2ban=$(check_service fail2ban)
 
 # ─── Account Count ───
-# Xray accounts (count email fields in config.json, exclude REMOVED_)
+# Xray accounts (count by comment markers, each user has 1 WS + 1 gRPC entry)
 if [ -f /etc/xray/config.json ]; then
-    acc_vmess=$(grep -c '"email"' /etc/xray/config.json 2>/dev/null || echo 0)
-    acc_vless=$(grep -c '#vless' /etc/xray/config.json 2>/dev/null || echo 0)
-    acc_trojan=$(grep -c '#trojanws' /etc/xray/config.json 2>/dev/null || echo 0)
-    acc_ss=$(grep -c '#ssws' /etc/xray/config.json 2>/dev/null || echo 0)
-    # Count unique non-REMOVED users
+    # Count WS entries only (each user has exactly 1 WS entry)
+    acc_vmess=$(grep -c '#vmess$' /etc/xray/config.json 2>/dev/null || echo 0)
+    acc_vless=$(grep -c '#vless$' /etc/xray/config.json 2>/dev/null || echo 0)
+    acc_trojan=$(grep -c '#trojanws$' /etc/xray/config.json 2>/dev/null || echo 0)
+    acc_ss=$(grep -c '#ssws$' /etc/xray/config.json 2>/dev/null || echo 0)
+    # Total unique users (exclude REMOVED_)
     acc_total=$(grep -oP '"email":\s*"\K[^"]+' /etc/xray/config.json 2>/dev/null | grep -v "^REMOVED_" | sort -u | wc -l)
 else
     acc_vmess=0; acc_vless=0; acc_trojan=0; acc_ss=0; acc_total=0
