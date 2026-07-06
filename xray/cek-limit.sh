@@ -5,6 +5,7 @@
 # Jika tanpa argumen, tampilkan semua user
 # ============================================
 
+export TERM=dumb
 source /etc/xray/limit/xray-limit.sh
 
 LIMIT_DIR="/etc/xray/limit"
@@ -99,7 +100,9 @@ else
         used_bytes=$(get_user_bandwidth "$user")
         update_used_bytes "$user" "$used_bytes"
         if [ "$QUOTA_BYTES" -gt 0 ]; then
-            quota="${used_bytes}/${QUOTA_BYTES}"
+            used_fmt=$(format_bytes "$used_bytes")
+            quota_fmt=$(format_bytes "$QUOTA_BYTES")
+            quota="${used_fmt} / ${quota_fmt}"
         else
             quota="Unlimited"
         fi
