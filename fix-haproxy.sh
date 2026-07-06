@@ -41,6 +41,9 @@ fi
 # ============================================================
 echo -e "[ ${green}2/6${NC} ] Menghapus stunnel4..."
 
+# Kill stunnel4 process yang mungkin masih jalan
+killall -9 stunnel4 2>/dev/null
+
 # Stop service
 systemctl stop stunnel4 2>/dev/null
 /etc/init.d/stunnel4 stop 2>/dev/null
@@ -302,31 +305,26 @@ if [ -f /etc/nginx/conf.d/xray.conf ]; then
     # Backup
     cp /etc/nginx/conf.d/xray.conf /etc/nginx/conf.d/xray.conf.bak.$(date +%Y%m%d%H%M)
     
-    # Change listen to internal port
-    sed -i 's/listen 80;/listen 127.0.0.1:81;/g' /etc/nginx/conf.d/xray.conf
-    sed -i 's/listen \[::\]:80;/# listen [::]:80; # disabled/g' /etc/nginx/conf.d/xray.conf
-    sed -i 's/listen 443.*/listen 127.0.0.1:81;/g' /etc/nginx/conf.d/xray.conf
-    sed -i 's/listen \[::\]:443.*/# listen [::]:443; # disabled/g' /etc/nginx/conf.d/xray.conf
+    # Hapus semua listen directives yang lama
+    sed -i '/listen 80;/d' /etc/nginx/conf.d/xray.conf
+    sed -i '/listen \[::\]:80/d' /etc/nginx/conf.d/xray.conf
+    sed -i '/listen 443/d' /etc/nginx/conf.d/xray.conf
+    sed -i '/listen \[::\]:443/d' /etc/nginx/conf.d/xray.conf
     sed -i '/ssl_certificate /d' /etc/nginx/conf.d/xray.conf
     sed -i '/ssl_certificate_key /d' /etc/nginx/conf.d/xray.conf
     sed -i '/ssl_ciphers /d' /etc/nginx/conf.d/xray.conf
     sed -i '/ssl_protocols /d' /etc/nginx/conf.d/xray.conf
     sed -i 's/ http2//g' /etc/nginx/conf.d/xray.conf
+    sed -i 's/ reuseport//g' /etc/nginx/conf.d/xray.conf
+    
+    # Tambah listen internal di awal server block
+    sed -i '0,/server {/s/server {/server {\n             listen 127.0.0.1:81;/' /etc/nginx/conf.d/xray.conf
     
     # Test nginx config
     if nginx -t 2>/dev/null; then
         echo -e "[ ${green}OK${NC} ] Nginx migrated to 127.0.0.1:81"
     else
-        echo -e "[ ${red}ERROR${NC} ] Nginx config error, restoring backup..."
-        cp /etc/nginx/conf.d/xray.conf.bak.$(date +%Y%m%d%H%M) /etc/nginx/conf.d/xray.conf
-        # Try simpler migration - just change listen ports
-        sed -i 's/listen 80;/listen 127.0.0.1:81;/g' /etc/nginx/conf.d/xray.conf
-        sed -i 's/listen 443 ssl.*/listen 127.0.0.1:81;/g' /etc/nginx/conf.d/xray.conf
-        if nginx -t 2>/dev/null; then
-            echo -e "[ ${green}OK${NC} ] Nginx migrated (simple mode)"
-        else
-            echo -e "[ ${red}ERROR${NC} ] Nginx config error persists, cek manual"
-        fi
+        echo -e "[ ${red}ERROR${NC} ] Nginx config error!"
     fi
 else
     echo -e "[ ${yell}WARN${NC} ] Nginx config tidak ditemukan"
@@ -346,6 +344,12 @@ for port in 443 2053 2083 2087 2096 8443 222 777 80 8080 8880 2052 2082 2086 209
     iptables -I INPUT -p tcp --dport $port -j ACCEPT 2>/dev/null
 done
 netfilter-persistent save >/dev/null 2>&1
+
+# Kill processes on HAProxy ports (avoid conflict)
+for port in 443 2053 2083 2087 2096 8443 222 777 80 8080 8880 2052 2082 2086 2095; do
+    fuser -k $port/tcp 2>/dev/null
+done
+sleep 1
 
 # Start HAProxy
 systemctl daemon-reload
