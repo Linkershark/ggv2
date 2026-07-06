@@ -43,13 +43,28 @@ ORANGE='\033[0;33m'
 domain=$(cat /etc/xray/domain)
 uptime="$(uptime -p | cut -d " " -f 2-10)"
 
-# Bandwidth
-dtoday="$(vnstat -i eth0 | grep "today" | awk '{print $2" "substr ($3, 1, 1)}')"
-utoday="$(vnstat -i eth0 | grep "today" | awk '{print $5" "substr ($6, 1, 1)}')"
-ttoday="$(vnstat -i eth0 | grep "today" | awk '{print $8" "substr ($9, 1, 1)}')"
-dmon="$(vnstat -i eth0 -m | grep "`date +"%b '%y"`" | awk '{print $3" "substr ($4, 1, 1)}')"
-umon="$(vnstat -i eth0 -m | grep "`date +"%b '%y"`" | awk '{print $6" "substr ($7, 1, 1)}')"
-tmon="$(vnstat -i eth0 -m | grep "`date +"%b '%y"`" | awk '{print $9" "substr ($10, 1, 1)}')"
+# Bandwidth (auto-detect network interface)
+NET_IF=$(ip -o -4 route show to default | awk '{print $5}' | head -1)
+if [ -z "$NET_IF" ]; then
+    NET_IF="eth0"
+fi
+
+# Cek vnstat installed
+if command -v vnstat &>/dev/null; then
+    dtoday="$(vnstat -i "$NET_IF" | grep "today" | awk '{print $2" "substr ($3, 1, 1)}')"
+    utoday="$(vnstat -i "$NET_IF" | grep "today" | awk '{print $5" "substr ($6, 1, 1)}')"
+    ttoday="$(vnstat -i "$NET_IF" | grep "today" | awk '{print $8" "substr ($9, 1, 1)}')"
+    dmon="$(vnstat -i "$NET_IF" -m | grep "`date +"%b '%y"`" | awk '{print $3" "substr ($4, 1, 1)}')"
+    umon="$(vnstat -i "$NET_IF" -m | grep "`date +"%b '%y"`" | awk '{print $6" "substr ($7, 1, 1)}')"
+    tmon="$(vnstat -i "$NET_IF" -m | grep "`date +"%b '%y"`" | awk '{print $9" "substr ($10, 1, 1)}')"
+    
+    # Jika data kosong, set default
+    dtoday="${dtoday:-0 B}"; utoday="${utoday:-0 B}"; ttoday="${ttoday:-0 B}"
+    dmon="${dmon:-0 B}"; umon="${umon:-0 B}"; tmon="${tmon:-0 B}"
+else
+    dtoday="N/A"; utoday="N/A"; ttoday="N/A"
+    dmon="N/A"; umon="N/A"; tmon="N/A"
+fi
 
 # CPU & RAM
 cpu_usage="$(top -bn1 | grep "Cpu(s)" | awk '{print $2}')"
