@@ -284,13 +284,11 @@ remove_user_from_xray() {
     systemctl restart xray >/dev/null 2>&1
 }
 
-# Format bytes ke human readable (tanpa bc, pakai awk)
+# Format bytes ke MB (untuk cek-limit)
 # Args: $1=bytes
 format_bytes() {
     local bytes=$1
-    if [ "$bytes" -ge 1073741824 ]; then
-        awk "BEGIN {printf \"%.2f GB\", $bytes/1073741824}"
-    elif [ "$bytes" -ge 1048576 ]; then
+    if [ "$bytes" -ge 1048576 ]; then
         awk "BEGIN {printf \"%.2f MB\", $bytes/1048576}"
     elif [ "$bytes" -ge 1024 ]; then
         awk "BEGIN {printf \"%.2f KB\", $bytes/1024}"
