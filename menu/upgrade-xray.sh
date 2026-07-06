@@ -33,10 +33,10 @@ case $choice in
     1) TARGET_VER="26.3.27" ;;
     2) TARGET_VER="26.2.6" ;;
     3) TARGET_VER="25.12.8" ;;
-    4) 
+    4)
         read -p "  Masukkan versi (contoh: 26.3.27): " TARGET_VER
         ;;
-    0) 
+    0)
         echo -e "\n  ${yell}Batal.${NC}"
         sleep 1
         m-system
@@ -58,9 +58,6 @@ echo -e "[ ${green}INFO${NC} ] Backup config..."
 mkdir -p /root/xray-backup
 cp /etc/xray/config.json /root/xray-backup/config.json.bak.$(date +%Y%m%d%H%M%S)
 
-# Backup service file lama
-cp /etc/systemd/system/xray.service /root/xray-backup/xray.service.bak 2>/dev/null
-
 echo -e "[ ${green}INFO${NC} ] Downloading Xray v${TARGET_VER}..."
 
 # Download dan install
@@ -69,13 +66,17 @@ bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release
 if [ $? -eq 0 ]; then
     echo ""
     echo -e "[ ${green}OK${NC} ] Xray v${TARGET_VER} berhasil diinstall!"
-    
+
     # ========================================
-    # FIX: Pastikan service pakai config yang benar
+    # FIX: Service file & config path
     # ========================================
     echo -e "[ ${green}INFO${NC} ] Fix service config path..."
-    
-    # Buat service file yang benar
+
+    # Hapus drop-in file yang override config path
+    rm -rf /etc/systemd/system/xray.service.d
+    rm -rf /etc/systemd/system/xray@.service.d
+
+    # Tulis service file yang benar
     cat > /etc/systemd/system/xray.service << 'SVCEOF'
 [Unit]
 Description=Xray Service
@@ -99,16 +100,12 @@ SVCEOF
 
     # Reload systemd
     systemctl daemon-reload
-    
-    # Buat symlink config jika belum ada
-    mkdir -p /usr/local/etc/xray
-    ln -sf /etc/xray/config.json /usr/local/etc/xray/config.json
-    
+
     # Restart xray
     echo -e "[ ${green}INFO${NC} ] Restarting Xray..."
     systemctl restart xray
     sleep 2
-    
+
     # Verify
     NEW_VER=$(xray version 2>/dev/null | head -1 | awk '{print $2}')
     if systemctl is-active --quiet xray; then
@@ -128,10 +125,8 @@ SVCEOF
         echo ""
     else
         echo -e "[ ${red}ERROR${NC} ] Xray gagal start!"
-        echo -e "[ ${yell}INFO${NC] ] Restore backup:"
+        echo -e "[ ${yell}INFO${NC} ] Restore backup:"
         echo -e "  cp /root/xray-backup/config.json.bak.* /etc/xray/config.json"
-        echo -e "  cp /root/xray-backup/xray.service.bak /etc/systemd/system/xray.service"
-        echo -e "  systemctl daemon-reload && systemctl restart xray"
         echo -e "[ ${yell}INFO${NC} ] Cek log: journalctl -u xray --no-pager -n 20"
     fi
 else
