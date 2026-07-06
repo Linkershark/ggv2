@@ -58,12 +58,36 @@ echo -e "[ ${green}INFO${NC} ] Backup config..."
 mkdir -p /root/xray-backup
 cp /etc/xray/config.json /root/xray-backup/config.json.bak.$(date +%Y%m%d%H%M%S)
 
-echo -e "[ ${green}INFO${NC} ] Downloading Xray v${TARGET_VER}..."
+echo -e "[ ${green}INFO${NC} ] Downloading install script..."
 
-# Download dan install
-bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install --version ${TARGET_VER}
+# Download install script dulu, cek apakah berhasil
+INSTALL_SCRIPT="/tmp/xray-install.sh"
+curl -sL -o "$INSTALL_SCRIPT" "https://github.com/XTLS/Xray-install/raw/main/install-release.sh"
 
-if [ $? -eq 0 ]; then
+# Cek apakah file download adalah script bash
+if [ ! -f "$INSTALL_SCRIPT" ] || ! head -1 "$INSTALL_SCRIPT" | grep -q "#!/bin/bash"; then
+    echo -e "[ ${red}ERROR${NC} ] Gagal download install script!"
+    echo -e "[ ${yell}INFO${NC} ] Kemungkinan GitHub rate limit. Coba lagi dalam beberapa menit."
+    echo -e "[ ${yell}INFO${NC} ] Atau download manual:"
+    echo -e "  curl -L -o /tmp/xray-install.sh https://github.com/XTLS/Xray-install/raw/main/install-release.sh"
+    echo -e "  bash /tmp/xray-install.sh install --version ${TARGET_VER}"
+    rm -f "$INSTALL_SCRIPT"
+    echo ""
+    read -n 1 -s -r -p "  Press any key to back..."
+    m-system
+    exit 1
+fi
+
+echo -e "[ ${green}INFO${NC} ] Installing Xray v${TARGET_VER}..."
+
+# Jalankan install script
+bash "$INSTALL_SCRIPT" install --version ${TARGET_VER}
+INSTALL_RESULT=$?
+
+# Cleanup
+rm -f "$INSTALL_SCRIPT"
+
+if [ $INSTALL_RESULT -eq 0 ]; then
     echo ""
     echo -e "[ ${green}OK${NC} ] Xray v${TARGET_VER} berhasil diinstall!"
 
@@ -72,7 +96,7 @@ if [ $? -eq 0 ]; then
     # ========================================
     echo -e "[ ${green}INFO${NC} ] Fix service config path..."
 
-    # Hapus drop-in file yang override config path
+    # Hapus drop-in file yang override config
     rm -rf /etc/systemd/system/xray.service.d
     rm -rf /etc/systemd/system/xray@.service.d
 
@@ -130,7 +154,7 @@ SVCEOF
         echo -e "[ ${yell}INFO${NC} ] Cek log: journalctl -u xray --no-pager -n 20"
     fi
 else
-    echo -e "[ ${red}ERROR${NC} ] Gagal download/install Xray v${TARGET_VER}"
+    echo -e "[ ${red}ERROR${NC} ] Gagal install Xray v${TARGET_VER}"
 fi
 
 echo ""
