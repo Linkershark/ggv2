@@ -4,7 +4,7 @@ biji=`date +"%Y-%m-%d" -d "$dateFromServer"`
 #########################
 
 BURIQ () {
-    curl -sS https://raw.githubusercontent.com/Linkershark/gg/aio/permission/ip > /root/tmp
+    curl -sS https://raw.githubusercontent.com/Linkershark/ggv2/aio/permission/ip > /root/tmp
     data=( `cat /root/tmp | grep -E "^### " | awk '{print $2}'` )
     for user in "${data[@]}"
     do
@@ -22,7 +22,7 @@ BURIQ () {
 }
 # https://raw.githubusercontent.com/nanotechid/supreme/aio/permission/ip 
 MYIP=$(curl -sS ipv4.icanhazip.com)
-Name=$(curl -sS https://raw.githubusercontent.com/Linkershark/gg/aio/permission/ip | grep $MYIP | awk '{print $2}')
+Name=$(curl -sS https://raw.githubusercontent.com/Linkershark/ggv2/aio/permission/ip | grep $MYIP | awk '{print $2}')
 echo $Name > /usr/local/etc/.$Name.ini
 CekOne=$(cat /usr/local/etc/.$Name.ini)
 
@@ -39,7 +39,7 @@ fi
 
 PERMISSION () {
     MYIP=$(curl -sS ipv4.icanhazip.com)
-    IZIN=$(curl -sS https://raw.githubusercontent.com/Linkershark/gg/aio/permission/ip | awk '{print $4}' | grep $MYIP)
+    IZIN=$(curl -sS https://raw.githubusercontent.com/Linkershark/ggv2/aio/permission/ip | awk '{print $4}' | grep $MYIP)
     if [ "$MYIP" = "$IZIN" ]; then
     Bloman
     else
@@ -188,15 +188,22 @@ echo -e "$green      Install SSH Websocket               $NC"
 echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
 sleep 0.5
 clear
-wget https://raw.githubusercontent.com/Linkershark/gg/aio/ssh/ssh-vpn.sh && chmod +x ssh-vpn.sh && ./ssh-vpn.sh
+wget https://raw.githubusercontent.com/Linkershark/ggv2/aio/ssh/ssh-vpn.sh && chmod +x ssh-vpn.sh && ./ssh-vpn.sh
 #Instal Xray
 echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
 echo -e "$green          Install XRAY              $NC"
 echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
 sleep 0.5
 clear
-wget https://raw.githubusercontent.com/Linkershark/gg/aio/xray/ins-xray.sh && chmod +x ins-xray.sh && ./ins-xray.sh
-wget https://raw.githubusercontent.com/Linkershark/gg/aio/sshws/insshws.sh && chmod +x insshws.sh && ./insshws.sh
+wget https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/ins-xray.sh && chmod +x ins-xray.sh && ./ins-xray.sh
+wget https://raw.githubusercontent.com/Linkershark/ggv2/aio/sshws/insshws.sh && chmod +x insshws.sh && ./insshws.sh
+#Install HAProxy (ganti stunnel4)
+echo -e "\\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\033[0m"
+echo -e "$green      Install HAProxy + Optimasi               $NC"
+echo -e "\\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\033[0m"
+sleep 0.5
+clear
+wget https://raw.githubusercontent.com/Linkershark/ggv2/aio/ssh/install-haproxy.sh && chmod +x install-haproxy.sh && ./install-haproxy.sh
 clear
 
 #echo "-----Install Adblock------"
@@ -229,7 +236,7 @@ if [ ! -f "/etc/log-create-user.log" ]; then
 echo "Log All Account " > /etc/log-create-user.log
 fi
 history -c
-serverV=$( curl -sS https://raw.githubusercontent.com/Linkershark/gg/aio/permission/versi  )
+serverV=$( curl -sS https://raw.githubusercontent.com/Linkershark/ggv2/aio/permission/versi  )
 echo $serverV > /opt/.ver
 aureb=$(cat /home/re_otm)
 b=11
@@ -241,36 +248,37 @@ gg="AM"
 fi
 curl -sS ifconfig.me > /etc/myipvps
 echo " "
-echo "=====================-[ SUPREME ]-===================="
+echo "=====================-[ AUTO SCRIPT ]-===================="
 echo ""
 echo "------------------------------------------------------------"
 echo ""
 echo ""
 echo "   >>> Service & Port"  | tee -a log-install.txt
 echo "   - OpenSSH                  : 22"  | tee -a log-install.txt
-echo "   - SSH Websocket            : 80 [ON]" | tee -a log-install.txt
-echo "   - SSH SSL Websocket        : 443" | tee -a log-install.txt
-echo "   - Stunnel4                 : 222, 777" | tee -a log-install.txt
+echo "   - SSH Websocket            : 80, 2095 [ON]" | tee -a log-install.txt
+echo "   - SSH SSL (HAProxy)        : 222, 443" | tee -a log-install.txt
+echo "   - HAProxy HTTPS            : 443, 2053, 2083, 2087, 2096, 8443" | tee -a log-install.txt
+echo "   - HAProxy HTTP             : 80, 8080, 8880, 2052, 2082, 2086, 2095" | tee -a log-install.txt
 echo "   - Dropbear                 : 109, 143" | tee -a log-install.txt
 echo "   - Badvpn                   : 7100-7900" | tee -a log-install.txt
-echo "   - Nginx                    : 81" | tee -a log-install.txt
-echo "   - Vmess WS TLS             : 443" | tee -a log-install.txt
-echo "   - Vless WS TLS             : 443" | tee -a log-install.txt
-echo "   - Trojan WS TLS            : 443" | tee -a log-install.txt
-echo "   - Shadowsocks WS TLS       : 443" | tee -a log-install.txt
-echo "   - Vmess WS none TLS        : 80" | tee -a log-install.txt
-echo "   - Vless WS none TLS        : 80" | tee -a log-install.txt
-echo "   - Trojan WS none TLS       : 80" | tee -a log-install.txt
-echo "   - Shadowsocks WS none TLS  : 80" | tee -a log-install.txt
-echo "   - Vmess gRPC               : 443" | tee -a log-install.txt
-echo "   - Vless gRPC               : 443" | tee -a log-install.txt
-echo "   - Trojan gRPC              : 443" | tee -a log-install.txt
-echo "   - Shadowsocks gRPC         : 443" | tee -a log-install.txt
+echo "   - Nginx                    : 81 (internal)" | tee -a log-install.txt
+echo "   - Vmess WS TLS             : 443, 2053, 2083, 2087, 2096, 8443" | tee -a log-install.txt
+echo "   - Vless WS TLS             : 443, 2053, 2083, 2087, 2096, 8443" | tee -a log-install.txt
+echo "   - Trojan WS TLS            : 443, 2053, 2083, 2087, 2096, 8443" | tee -a log-install.txt
+echo "   - Shadowsocks WS TLS       : 443, 2053, 2083, 2087, 2096, 8443" | tee -a log-install.txt
+echo "   - Vmess WS none TLS        : 80, 2052, 2082, 2086, 2095" | tee -a log-install.txt
+echo "   - Vless WS none TLS        : 80, 2052, 2082, 2086, 2095" | tee -a log-install.txt
+echo "   - Trojan WS none TLS       : 80, 2052, 2082, 2086, 2095" | tee -a log-install.txt
+echo "   - Shadowsocks WS none TLS  : 80, 2052, 2082, 2086, 2095" | tee -a log-install.txt
+echo "   - Vmess gRPC               : 443, 2053, 2083, 2087, 2096, 8443" | tee -a log-install.txt
+echo "   - Vless gRPC               : 443, 2053, 2083, 2087, 2096, 8443" | tee -a log-install.txt
+echo "   - Trojan gRPC              : 443, 2053, 2083, 2087, 2096, 8443" | tee -a log-install.txt
+echo "   - Shadowsocks gRPC         : 443, 2053, 2083, 2087, 2096, 8443" | tee -a log-install.txt
 echo ""
 echo ""
 echo "------------------------------------------------------------"
 echo ""
-echo "=====================-[ SUPREME ]-===================="
+echo "=====================-[ AUTO SCRIPT ]-===================="
 echo -e ""
 echo ""
 echo "" | tee -a log-install.txt

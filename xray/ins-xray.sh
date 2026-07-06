@@ -1,4 +1,11 @@
 #!/bin/bash
+# Color definitions
+red='\e[1;31m'
+green='\e[0;32m'
+yell='\e[1;33m'
+tyblue='\e[1;36m'
+NC='\e[0m'
+
 echo -e "
 "
 date
@@ -491,31 +498,69 @@ systemctl restart runn
 
 cd /usr/bin/
 # vmess
-wget -O add-ws "https://raw.githubusercontent.com/Linkershark/gg/aio/xray/add-ws.sh" && chmod +x add-ws
-wget -O trialvmess "https://raw.githubusercontent.com/Linkershark/gg/aio/xray/trialvmess.sh" && chmod +x trialvmess
-wget -O renew-ws "https://raw.githubusercontent.com/Linkershark/gg/aio/xray/renew-ws.sh" && chmod +x renew-ws
-wget -O del-ws "https://raw.githubusercontent.com/Linkershark/gg/aio/xray/del-ws.sh" && chmod +x del-ws
-wget -O cek-ws "https://raw.githubusercontent.com/Linkershark/gg/aio/xray/cek-ws.sh" && chmod +x cek-ws
+wget -O add-ws "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/add-ws.sh" && chmod +x add-ws
+wget -O trialvmess "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/trialvmess.sh" && chmod +x trialvmess
+wget -O renew-ws "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/renew-ws.sh" && chmod +x renew-ws
+wget -O del-ws "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/del-ws.sh" && chmod +x del-ws
+wget -O cek-ws "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/cek-ws.sh" && chmod +x cek-ws
 
 # vless
-wget -O add-vless "https://raw.githubusercontent.com/Linkershark/gg/aio/xray/add-vless.sh" && chmod +x add-vless
-wget -O trialvless "https://raw.githubusercontent.com/Linkershark/gg/aio/xray/trialvless.sh" && chmod +x trialvless
-wget -O renew-vless "https://raw.githubusercontent.com/Linkershark/gg/aio/xray/renew-vless.sh" && chmod +x renew-vless
-wget -O del-vless "https://raw.githubusercontent.com/Linkershark/gg/aio/xray/del-vless.sh" && chmod +x del-vless
-wget -O cek-vless "https://raw.githubusercontent.com/Linkershark/gg/aio/xray/cek-vless.sh" && chmod +x cek-vless
+wget -O add-vless "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/add-vless.sh" && chmod +x add-vless
+wget -O trialvless "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/trialvless.sh" && chmod +x trialvless
+wget -O renew-vless "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/renew-vless.sh" && chmod +x renew-vless
+wget -O del-vless "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/del-vless.sh" && chmod +x del-vless
+wget -O cek-vless "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/cek-vless.sh" && chmod +x cek-vless
 
 # trojan
-wget -O add-tr "https://raw.githubusercontent.com/Linkershark/gg/aio/xray/add-tr.sh" && chmod +x add-tr
-wget -O trialtrojan "https://raw.githubusercontent.com/Linkershark/gg/aio/xray/trialtrojan.sh" && chmod +x trialtrojan
-wget -O del-tr "https://raw.githubusercontent.com/Linkershark/gg/aio/xray/del-tr.sh" && chmod +x del-tr
-wget -O renew-tr "https://raw.githubusercontent.com/Linkershark/gg/aio/xray/renew-tr.sh" && chmod +x renew-tr
-wget -O cek-tr "https://raw.githubusercontent.com/Linkershark/gg/aio/xray/cek-tr.sh" && chmod +x cek-tr
+wget -O add-tr "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/add-tr.sh" && chmod +x add-tr
+wget -O trialtrojan "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/trialtrojan.sh" && chmod +x trialtrojan
+wget -O del-tr "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/del-tr.sh" && chmod +x del-tr
+wget -O renew-tr "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/renew-tr.sh" && chmod +x renew-tr
+wget -O cek-tr "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/cek-tr.sh" && chmod +x cek-tr
 
 # shadowsocks
-wget -O add-ssws "https://raw.githubusercontent.com/Linkershark/gg/aio/xray/add-ssws.sh" && chmod +x add-ssws
-wget -O trialssws "https://raw.githubusercontent.com/Linkershark/gg/aio/xray/trialssws.sh" && chmod +x trialssws
-wget -O del-ssws "https://raw.githubusercontent.com/Linkershark/gg/aio/xray/del-ssws.sh" && chmod +x del-ssws
-wget -O renew-ssws "https://raw.githubusercontent.com/Linkershark/gg/aio/xray/renew-ssws.sh" && chmod +x renew-ssws
+wget -O add-ssws "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/add-ssws.sh" && chmod +x add-ssws
+wget -O trialssws "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/trialssws.sh" && chmod +x trialssws
+wget -O del-ssws "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/del-ssws.sh" && chmod +x del-ssws
+wget -O renew-ssws "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/renew-ssws.sh" && chmod +x renew-ssws
+
+# limit & quota system
+mkdir -p /etc/xray/limit
+wget -O /etc/xray/limit/xray-limit.sh "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/xray-limit.sh" && chmod +x /etc/xray/limit/xray-limit.sh
+wget -O /usr/local/bin/xray-limit-checker "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/xray-limit-checker.sh" && chmod +x /usr/local/bin/xray-limit-checker
+wget -O /usr/local/bin/cek-limit "https://raw.githubusercontent.com/Linkershark/ggv2/aio/xray/cek-limit.sh" && chmod +x /usr/local/bin/cek-limit
+
+# setup Telegram notifikasi untuk limit
+echo ""
+echo -e "${yell}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${green}  Setup Notifikasi Telegram Limit  ${NC}"
+echo -e "${yell}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "[ ${green}INFO${NC} ] Kosongkan jika tidak ingin notifikasi Telegram"
+read -rp "Telegram Bot Token: " tg_bot_token
+read -rp "Telegram Chat ID (admin/group): " tg_chat_id
+
+if [ -n "$tg_bot_token" ] && [ -n "$tg_chat_id" ]; then
+    cat > /etc/xray/limit/telegram.conf <<-TGEOF
+BOT_TOKEN=${tg_bot_token}
+CHAT_ID=${tg_chat_id}
+TGEOF
+    echo -e "[ ${green}OK${NC} ] Notifikasi Telegram aktif"
+else
+    cat > /etc/xray/limit/telegram.conf <<-TGEOF
+# Uncomment dan isi untuk mengaktifkan notifikasi
+# BOT_TOKEN=your_bot_token_here
+# CHAT_ID=your_chat_id_here
+TGEOF
+    echo -e "[ ${yell}SKIP${NC} ] Notifikasi Telegram tidak diaktifkan"
+fi
+
+# setup cron job untuk limit checker (setiap 1 menit)
+cat > /etc/cron.d/xray-limit-check <<-LCEOF
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+* * * * * root /usr/local/bin/xray-limit-checker >/dev/null 2>&1
+LCEOF
+service cron restart >/dev/null 2>&1
 
 
 sleep 0.5

@@ -57,11 +57,15 @@ v2ray-menu
 cipher="aes-128-gcm"
 uuid=$(cat /proc/sys/kernel/random/uuid)
 read -p "Expired (days): " masaaktif
+read -p "Quota Limit (GB, 0=unlimited): " quota_limit
+read -p "IP/Device Limit (0=unlimited): " ip_limit
 exp=`date -d "$masaaktif days" +"%Y-%m-%d"`
+source /etc/xray/limit/xray-limit.sh
+save_user_limit "$user" "${quota_limit:-0}" "${ip_limit:-0}" "0" "0"
 sed -i '/#ssws$/a\### '"$user $exp"'\
-},{"password": "'""$uuid""'","method": "'""$cipher""'","email": "'""$user""'"' /etc/xray/config.json
+},{\"password\": \"'"$uuid"'\",\"method\": \"'"$cipher"'\",\"email\": \"'"$user"'\"' /etc/xray/config.json
 sed -i '/#ssgrpc$/a\### '"$user $exp"'\
-},{"password": "'""$uuid""'","method": "'""$cipher""'","email": "'""$user""'"' /etc/xray/config.json
+},{\"password\": \"'"$uuid"'\",\"method\": \"'"$cipher"'\",\"email\": \"'"$user"'\"' /etc/xray/config.json
 echo $cipher:$uuid > /tmp/log
 shadowsocks_base64=$(cat /tmp/log)
 echo -n "${shadowsocks_base64}" | base64 > /tmp/log1
@@ -312,6 +316,8 @@ echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━�
 echo -e "Link gRPC      : ${shadowsockslink2}" | tee -a /etc/log-create-user.log
 echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m" | tee -a /etc/log-create-user.log
 echo -e "Expired On     : $exp" | tee -a /etc/log-create-user.log
+echo -e "Quota Limit    : ${quota_limit:-0} GB" | tee -a /etc/log-create-user.log
+echo -e "IP Limit       : ${ip_limit:-0} device(s)" | tee -a /etc/log-create-user.log
 echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m" | tee -a /etc/log-create-user.log
 echo "" | tee -a /etc/log-create-user.log
 read -n 1 -s -r -p "Press any key to back on menu"
