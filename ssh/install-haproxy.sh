@@ -62,11 +62,13 @@ cp /etc/nginx/conf.d/xray.conf /etc/nginx/conf.d/xray.conf.bak 2>/dev/null
 
 # Ubah nginx listen ke internal port (HAProxy yang handle external)
 if [ -f /etc/nginx/conf.d/xray.conf ]; then
-    # Ganti listen directives
-    sed -i 's/listen 80;/listen 127.0.0.1:81;/g' /etc/nginx/conf.d/xray.conf
-    sed -i 's/listen \[::\]:80;/# listen [::]:80; # disabled, HAProxy handles IPv6/g' /etc/nginx/conf.d/xray.conf
-    sed -i 's/listen 443.*/listen 127.0.0.1:81;/g' /etc/nginx/conf.d/xray.conf
-    sed -i 's/listen \[::\]:443.*/# listen [::]:443; # disabled, HAProxy handles TLS/g' /etc/nginx/conf.d/xray.conf
+    # Ganti listen 80 ke 127.0.0.1:81 (IPv4)
+    sed -i 's/listen 80;/listen 127.0.0.1:81;/' /etc/nginx/conf.d/xray.conf
+    # Disable IPv6 listen 80
+    sed -i 's/listen \[::\]:80;/# listen [::]:80; # disabled, HAProxy handles IPv6/' /etc/nginx/conf.d/xray.conf
+    # Disable listen 443 (both IPv4 and IPv6) - HAProxy handles TLS
+    sed -i 's/listen 443.*/# listen 443; # disabled, HAProxy handles TLS/' /etc/nginx/conf.d/xray.conf
+    sed -i 's/listen \[::\]:443.*/# listen [::]:443; # disabled, HAProxy handles TLS/' /etc/nginx/conf.d/xray.conf
 
     # Hapus SSL directives (HAProxy yang handle TLS)
     sed -i '/ssl_certificate /d' /etc/nginx/conf.d/xray.conf
@@ -76,6 +78,17 @@ if [ -f /etc/nginx/conf.d/xray.conf ]; then
 
     # Hapus http2 dari listen (tidak perlu di internal)
     sed -i 's/ http2//g' /etc/nginx/conf.d/xray.conf
+
+    # Add health check endpoint for HAProxy
+    if ! grep -q 'location = /health' /etc/nginx/conf.d/xray.conf; then
+        sed -i '/server_name/a\
+\
+location = /health {\
+    access_log off;\
+    return 200 '"'"'OK'"'"';\
+    add_header Content-Type text/plain;\
+}' /etc/nginx/conf.d/xray.conf
+    fi
 
     echo -e "[ ${green}OK${NC} ] Nginx migrated to 127.0.0.1:81"
 fi
@@ -119,7 +132,6 @@ global
 defaults
     log     global
     mode    tcp
-    option  tcplog
     option  dontlognull
     option  tcp-check
     log-format "%ci:%cp [%t] %ft %b/%s %Tw/%Tc/%Tt %B %ts %ac/%fc/%bc/%sc/%rc %sq/%bq"
@@ -155,8 +167,6 @@ frontend ft_https
     bind *:2087 ssl crt /etc/haproxy/certs/cert.pem alpn h2,http/1.1
     bind *:2096 ssl crt /etc/haproxy/certs/cert.pem alpn h2,http/1.1
     bind *:8443 ssl crt /etc/haproxy/certs/cert.pem alpn h2,http/1.1
-
-    mode tcp
 
     mode tcp
     option  clitcpka
@@ -216,7 +226,7 @@ frontend ft_http
     # Rate Limiting: max 100 koneksi per IP
     stick-table type ip size 100k expire 30s store conn_cur,http_req_rate(10s)
     tcp-request connection track-sc0 src
-    http-request deny deny_status 429 if { sc0_http_req_rate(10s) gt 200 }
+    http-request deny deny_status 429 if { sc0_http_req_rate gt 200 }
 
     # Xray WS Path Routing
     use_backend be_xray_vmess_ws if { path_beg /vmess }
@@ -244,7 +254,7 @@ frontend ft_ws_dropbear
 # Nginx (HTTP internal)
 backend be_nginx
     mode http
-    option  httpchk GET /
+    option  httpchk GET /health
     http-check expect status 200
     server nginx 127.0.0.1:81 check inter 10s fall 3 rise 2
 

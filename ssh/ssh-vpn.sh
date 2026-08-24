@@ -281,6 +281,21 @@ else
     DROPBEAR_BIN="/usr/sbin/dropbear"
 fi
 
+# Ensure dropbear directory exists and generate host keys
+mkdir -p /etc/dropbear
+if [ ! -f /etc/dropbear/dropbear_rsa_host_key ]; then
+    echo -e "[ ${green}INFO${NC} ] Generating dropbear RSA host key..."
+    dropbearkey -t rsa -f /etc/dropbear/dropbear_rsa_host_key >/dev/null 2>&1
+fi
+if [ ! -f /etc/dropbear/dropbear_dss_host_key ]; then
+    echo -e "[ ${green}INFO${NC} ] Generating dropbear DSS host key..."
+    dropbearkey -t dss -f /etc/dropbear/dropbear_dss_host_key >/dev/null 2>&1
+fi
+if [ ! -f /etc/dropbear/dropbear_ecdsa_host_key ]; then
+    echo -e "[ ${green}INFO${NC} ] Generating dropbear ECDSA host key..."
+    dropbearkey -t ecdsa -f /etc/dropbear/dropbear_ecdsa_host_key >/dev/null 2>&1
+fi
+
 sed -i 's/NO_START=1/NO_START=0/g' /etc/default/dropbear
 sed -i 's/DROPBEAR_PORT=22/DROPBEAR_PORT=143/g' /etc/default/dropbear
 sed -i 's/DROPBEAR_EXTRA_ARGS=/DROPBEAR_EXTRA_ARGS="-p 50000 -p 109 -p 110 -p 69"/g' /etc/default/dropbear
