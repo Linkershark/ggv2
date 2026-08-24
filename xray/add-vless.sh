@@ -101,13 +101,18 @@ read -p "IP/Device Limit (0=unlimited): " ip_limit
 exp=`date -d "$masaaktif days" +"%Y-%m-%d"`
 source /etc/xray/limit/xray-limit.sh
 save_user_limit "$user" "${quota_limit:-0}" "${ip_limit:-0}" "0" "0"
-sed -i '/#vless$/a\#& '"$user $exp"'\
-},{"id": "'""$uuid""'","email": "'""$user""'"' /etc/xray/config.json
-sed -i '/#vlessgrpc$/a\#& '"$user $exp"'\
-},{"id": "'""$uuid""'","email": "'""$user""'"' /etc/xray/config.json
-vlesslink1="vless://${uuid}@${domain}:$tls?path=/vless&security=tls&encryption=none&type=ws#${user}"
-vlesslink2="vless://${uuid}@${domain}:$none?path=/vless&encryption=none&type=ws#${user}"
-vlesslink3="vless://${uuid}@${domain}:$tls?mode=gun&security=tls&encryption=none&type=grpc&serviceName=vless-grpc&sni=bug.com#${user}"
+sed -i '/#vless$/a\#& '"$user $exp"'\\n},{"id": "'"$uuid"'","email": "'"$user"'"}' /etc/xray/config.json
+sed -i '/#vlessgrpc$/a\#& '"$user $exp"'\\n},{"id": "'"$uuid"'","email": "'"$user"'"}' /etc/xray/config.json
+
+# Fixed ports: 443 for TLS, 80 for non-TLS
+tls_port="443"
+ntls_port="80"
+
+# Complete VLESS links with all parameters
+vlesslink1="vless://${uuid}@${domain}:${tls_port}?path=%2Fvless&security=tls&encryption=none&host=${domain}&type=ws&sni=${domain}#${user}"
+vlesslink2="vless://${uuid}@${domain}:${ntls_port}?path=%2Fvless&encryption=none&type=ws#${user}"
+vlesslink3="vless://${uuid}@${domain}:${tls_port}?mode=gun&security=tls&encryption=none&type=grpc&serviceName=vless-grpc&sni=${domain}#${user}"
+
 systemctl restart xray
 clear
 echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m" | tee -a /etc/log-create-user.log
@@ -116,8 +121,8 @@ echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━�
 echo -e "Remarks        : ${user}" | tee -a /etc/log-create-user.log
 echo -e "Domain         : ${domain}" | tee -a /etc/log-create-user.log
 echo -e "Wildcard       : (bug.com).${domain}" | tee -a /etc/log-create-user.log
-echo -e "Port TLS       : $tls" | tee -a /etc/log-create-user.log
-echo -e "Port none TLS  : $none" | tee -a /etc/log-create-user.log
+echo -e "Port TLS       : ${tls_port}" | tee -a /etc/log-create-user.log
+echo -e "Port none TLS  : ${ntls_port}" | tee -a /etc/log-create-user.log
 echo -e "id             : ${uuid}" | tee -a /etc/log-create-user.log
 echo -e "Encryption     : none" | tee -a /etc/log-create-user.log
 echo -e "Network        : ws" | tee -a /etc/log-create-user.log

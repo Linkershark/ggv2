@@ -62,20 +62,23 @@ read -p "IP/Device Limit (0=unlimited): " ip_limit
 exp=`date -d "$masaaktif days" +"%Y-%m-%d"`
 source /etc/xray/limit/xray-limit.sh
 save_user_limit "$user" "${quota_limit:-0}" "${ip_limit:-0}" "0" "0"
-sed -i '/#ssws$/a\### '"$user $exp"'\
-},{\"password\": \"'"$uuid"'\",\"method\": \"'"$cipher"'\",\"email\": \"'"$user"'\"' /etc/xray/config.json
-sed -i '/#ssgrpc$/a\### '"$user $exp"'\
-},{\"password\": \"'"$uuid"'\",\"method\": \"'"$cipher"'\",\"email\": \"'"$user"'\"' /etc/xray/config.json
-echo $cipher:$uuid > /tmp/log
-shadowsocks_base64=$(cat /tmp/log)
-echo -n "${shadowsocks_base64}" | base64 > /tmp/log1
-shadowsocks_base64e=$(cat /tmp/log1)
-shadowsockslink="ss://${shadowsocks_base64e}@isi_bug_disini:$tls?path=ss-ws&security=tls&host=${domain}&type=ws&sni=${domain}#${user}"
-shadowsockslink1="ss://${shadowsocks_base64e}@isi_bug_disini:$ntls?path=ss-ws&security=none&host=${domain}&type=ws#${user}"
-shadowsockslink2="ss://${shadowsocks_base64e}@${domain}:$tls?mode=gun&security=tls&type=grpc&serviceName=ss-grpc&sni=bug.com#${user}"
+sed -i '/#ssws$/a\### '"$user $exp"'\\n},{"password": "'"$uuid"'","method": "'"$cipher"'","email": "'"$user"'"}' /etc/xray/config.json
+sed -i '/#ssgrpc$/a\### '"$user $exp"'\\n},{"password": "'"$uuid"'","method": "'"$cipher"'","email": "'"$user"'"}' /etc/xray/config.json
+
+# Fixed ports: 443 for TLS, 80 for non-TLS
+tls_port="443"
+ntls_port="80"
+
+# Complete Shadowsocks links with all parameters
+echo -n "${cipher}:${uuid}" | base64 -w 0 > /tmp/ss_base64
+ss_base64=$(cat /tmp/ss_base64)
+
+shadowsockslink="ss://${ss_base64}@${domain}:${tls_port}?path=%2Fss-ws&security=tls&host=${domain}&type=ws&sni=${domain}#${user}"
+shadowsockslink1="ss://${ss_base64}@${domain}:${ntls_port}?path=%2Fss-ws&security=none&host=${domain}&type=ws#${user}"
+shadowsockslink2="ss://${ss_base64}@${domain}:${tls_port}?mode=gun&security=tls&type=grpc&serviceName=ss-grpc&sni=${domain}#${user}"
+
 systemctl restart xray
-rm -rf /tmp/log
-rm -rf /tmp/log1
+rm -f /tmp/ss_base64
 cat > /home/vps/public_html/ss-$user.txt <<-END
 # sodosok ws
 { 
@@ -294,31 +297,31 @@ END
 systemctl restart xray > /dev/null 2>&1
 service cron restart > /dev/null 2>&1
 clear
-echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m" | tee -a /etc/log-create-user.log
-echo -e "\\E[0;41;36m        Shadowsocks Account      \E[0m" | tee -a /etc/log-create-user.log
-echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m" | tee -a /etc/log-create-user.log
+echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m" | tee -a /etc/log-create-user.log
+echo -e "\E[0;41;36m        Shadowsocks Account      \E[0m" | tee -a /etc/log-create-user.log
+echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m" | tee -a /etc/log-create-user.log
 echo -e "Remarks        : ${user}" | tee -a /etc/log-create-user.log
 echo -e "Domain         : ${domain}" | tee -a /etc/log-create-user.log
 echo -e "Wildcard       : (bug.com).${domain}" | tee -a /etc/log-create-user.log
-echo -e "Port TLS       : ${tls}" | tee -a /etc/log-create-user.log
-echo -e "Port none TLS  : ${ntls}" | tee -a /etc/log-create-user.log
-echo -e "Port gRPC      : ${tls}" | tee -a /etc/log-create-user.log
+echo -e "Port TLS       : ${tls_port}" | tee -a /etc/log-create-user.log
+echo -e "Port none TLS  : ${ntls_port}" | tee -a /etc/log-create-user.log
+echo -e "Port gRPC      : ${tls_port}" | tee -a /etc/log-create-user.log
 echo -e "Password       : ${uuid}" | tee -a /etc/log-create-user.log
 echo -e "Ciphers        : ${cipher}" | tee -a /etc/log-create-user.log
 echo -e "Network        : ws/grpc" | tee -a /etc/log-create-user.log
 echo -e "Path           : /ss-ws" | tee -a /etc/log-create-user.log
 echo -e "ServiceName    : ss-grpc" | tee -a /etc/log-create-user.log
-echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m" | tee -a /etc/log-create-user.log
+echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m" | tee -a /etc/log-create-user.log
 echo -e "Link TLS       : ${shadowsockslink}" | tee -a /etc/log-create-user.log
-echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m" | tee -a /etc/log-create-user.log
+echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m" | tee -a /etc/log-create-user.log
 echo -e "Link none TLS  : ${shadowsockslink1}" | tee -a /etc/log-create-user.log
-echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m" | tee -a /etc/log-create-user.log
+echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m" | tee -a /etc/log-create-user.log
 echo -e "Link gRPC      : ${shadowsockslink2}" | tee -a /etc/log-create-user.log
-echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m" | tee -a /etc/log-create-user.log
+echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m" | tee -a /etc/log-create-user.log
 echo -e "Expired On     : $exp" | tee -a /etc/log-create-user.log
 echo -e "Quota Limit    : ${quota_limit:-0} GB" | tee -a /etc/log-create-user.log
 echo -e "IP Limit       : ${ip_limit:-0} device(s)" | tee -a /etc/log-create-user.log
-echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m" | tee -a /etc/log-create-user.log
+echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m" | tee -a /etc/log-create-user.log
 echo "" | tee -a /etc/log-create-user.log
 read -n 1 -s -r -p "Press any key to back on menu"
 
