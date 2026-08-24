@@ -9,13 +9,18 @@ masaaktif=1
 exp=`date -d "$masaaktif days" +"%Y-%m-%d"`
 source /etc/xray/limit/xray-limit.sh
 save_user_limit "$user" "$TRIAL_QUOTA_GB" "0" "1" "$TRIAL_HOURS"
-sed -i '/#vless$/a\#& '"$user $exp"'\
-},{"id": "'""$uuid""'","email": "'""$user""'"' /etc/xray/config.json
-sed -i '/#vlessgrpc$/a\#& '"$user $exp"'\
-},{"id": "'""$uuid""'","email": "'""$user""'"' /etc/xray/config.json
-vlesslink1="vless://${uuid}@${domain}:$tls?path=/vless&security=tls&encryption=none&type=ws#${user}"
-vlesslink2="vless://${uuid}@${domain}:$none?path=/vless&encryption=none&type=ws#${user}"
-vlesslink3="vless://${uuid}@${domain}:$tls?mode=gun&security=tls&encryption=none&type=grpc&serviceName=vless-grpc&sni=bug.com#${user}"
+sed -i '/#vless$/a\#& '"$user $exp"'\\n},{"id": "'"$uuid"'","email": "'"$user"'"}' /etc/xray/config.json
+sed -i '/#vlessgrpc$/a\#& '"$user $exp"'\\n},{"id": "'"$uuid"'","email": "'"$user"'"}' /etc/xray/config.json
+
+# Fixed ports for links: 443 TLS, 80 non-TLS
+tls_port="443"
+ntls_port="80"
+
+# Complete VLESS links with all parameters
+vlesslink1="vless://${uuid}@${domain}:${tls_port}?path=%2Fvless&security=tls&encryption=none&host=${domain}&type=ws&sni=${domain}#${user}"
+vlesslink2="vless://${uuid}@${domain}:${ntls_port}?path=%2Fvless&encryption=none&type=ws#${user}"
+vlesslink3="vless://${uuid}@${domain}:${tls_port}?mode=gun&security=tls&encryption=none&type=grpc&serviceName=vless-grpc&sni=${domain}#${user}"
+
 systemctl restart xray
 clear
 echo -e "\033[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
